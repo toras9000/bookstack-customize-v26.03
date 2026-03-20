@@ -1,0 +1,74 @@
+name: test-bookstack-custoize-base
+
+volumes:
+  bookstack-db-data:
+  bookstack-app-data:
+
+services:
+  db:
+    image: mysql:8
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - bookstack-db-container
+    ports:
+      - "9906:3306"
+    healthcheck:
+      test: mysqladmin ping --host=localhost --user=$${MYSQL_USER} || exit 1
+      start_period: 180s
+      start_interval: 5s
+      timeout: 5s
+      interval: 300s
+      retries: 3
+    volumes:
+      - type: volume
+        source: bookstack-db-data
+        target: /var/lib/mysql
+    environment:
+      - TZ=Asia/Tokyo
+      - MYSQL_ROOT_PASSWORD=bookstack_rootpass
+      - MYSQL_DATABASE=bookstack_store
+      - MYSQL_USER=bookstack_user
+      - MYSQL_PASSWORD=bookstack_pass
+
+  app:
+    image: lscr.io/linuxserver/bookstack:version-v26.03.1
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - bookstack-app-container
+    ports:
+      - "9901:80"
+    healthcheck:
+      test: curl -f -s http://localhost:80 || exit 1
+      start_period: 300s
+      start_interval: 3s
+      timeout: 5s
+      interval: 300s
+      retries: 3
+    volumes:
+      - type: volume
+        source: bookstack-app-data
+        target: /config
+      - type: bind
+        source: ./modules
+        target: /work/modules
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      - TZ=Asia/Tokyo
+      - PUID=1000
+      - PGID=1000
+      - APP_URL=http://localhost:9901
+      - APP_KEY=base64:EE9OBef6jsw7268M+LLMJKvkZ9R9gXhIqwIdwdIzJ2I=
+      - APP_THEME=custom
+      - DB_HOST=bookstack-db-container
+      - DB_DATABASE=bookstack_store
+      - DB_USERNAME=bookstack_user
+      - DB_PASSWORD=bookstack_pass
