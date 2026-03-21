@@ -1,0 +1,14 @@
+#!/usr/bin/env -S dotnet run --file
+#:package Lestaly@0.120.0
+using Lestaly;
+using Lestaly.Cx;
+
+await Paved.ProceedAsync(async () =>
+{
+    await "docker".args("compose", "--file", ThisSource.RelativeFile("compose.yml"),
+        "exec",
+            "--workdir", "/app/www",
+        "app",
+            "php", "artisan", "bookstack:install-modul", "/work/modules/pseudo-permalink.zip"
+    ).input("yes\nyes\n2\n").result().success();
+});
